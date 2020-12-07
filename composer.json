@@ -6,7 +6,8 @@
       "ext-posix": "*",
       "ext-pcntl": "*",
       "ext-mysqli": "*",
-        "manticoresoftware/manticoresearch-php": "^1.5"
+        "manticoresoftware/manticoresearch-php": "^1.5",
+        "vanilla/garden-cli": "~2.0"
     },
     "autoload": {
       "psr-4": {

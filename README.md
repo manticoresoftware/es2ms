@@ -29,21 +29,14 @@ php migrator.php  #migrate all indexes
 ```
 
 ```php
-php migrator.php index1 index2
+php migrator.php  --es_host 127.0.0.1 --es_port 9200 my-index-000001
 ```
-
-Code:
-
-```php
-require 'vendor/autoload.php';
-
-$migrator = new Manticoresearch\ESMigrator();
-$migrator->migrateAll();
-```
+ 
 
 TODO
 ----
 
 * add configuration file
+* add more cli parameters
 * multi-threading?
 * structured types
