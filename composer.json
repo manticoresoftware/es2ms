@@ -1,0 +1,16 @@
+{
+    "require": {
+        "elasticsearch/elasticsearch": "~7.0",
+      "ext-json": "*",
+      "ext-curl": "*",
+      "ext-posix": "*",
+      "ext-pcntl": "*",
+      "ext-mysqli": "*",
+        "manticoresoftware/manticoresearch-php": "^1.5"
+    },
+    "autoload": {
+      "psr-4": {
+          "Manticoresearch\\" : "src/Manticoresearch/"
+      }
+    }   
+}
