@@ -1,13 +1,14 @@
 {
     "require": {
-        "elasticsearch/elasticsearch": "~7.0",
+      "elasticsearch/elasticsearch": "~7.0",
       "ext-json": "*",
       "ext-curl": "*",
       "ext-posix": "*",
       "ext-pcntl": "*",
       "ext-mysqli": "*",
-        "manticoresoftware/manticoresearch-php": "^1.5",
-        "vanilla/garden-cli": "~2.0"
+      "manticoresoftware/manticoresearch-php": "^1.5",
+      "vanilla/garden-cli": "~2.0",
+      "psr/log": "^1.1"
     },
     "autoload": {
       "psr-4": {

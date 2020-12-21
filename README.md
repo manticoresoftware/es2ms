@@ -29,7 +29,7 @@ php migrator.php  #migrate all indexes
 ```
 
 ```php
-php migrator.php  --es_host 127.0.0.1 --es_port 9200 my-index-000001
+php migrator.php  --es_host=127.0.0.1 --es_port=9200 --indexes=index1,index2
 ```
  
 

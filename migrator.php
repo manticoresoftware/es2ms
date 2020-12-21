@@ -2,9 +2,8 @@
 <?php
 require 'vendor/autoload.php';
 
-$migrator = new Manticoresearch\ESMigrator();
 //$esi = $migrator->getESIndex(['index'=>'optimize_perf']);
-$cli =  new Garden\Cli\Cli();
+$cli = new Garden\Cli\Cli();
 $cli->opt('indexes', 'Indexes', false)
     ->opt('es_host', 'Elastic host', false)
     ->opt('es_port', 'Elastic port', false)
@@ -14,30 +13,35 @@ $cli->opt('indexes', 'Indexes', false)
     ->opt('ms_port', 'Manticore port', false);
 $args = $cli->parse($argv, true);
 
-$indexes = $args['indexes'];
+$indexes = explode(',', $args['indexes']);
+
+$config = [];
 if (isset($args['es_host'])) {
-    $migrator->setElasticConfig([
+    $config['elasticsearch'] = [
         'host' => $args['es_host'],
         'port' => $args['es_port'],
         'user' => $args['es_user'],
         'pass' => $args['es_pass']
-    ]);
+    ];
 }
 if (isset($args['ms_host'])) {
-    $migrator->setManticoreConfig([
+    $config['manticoresearch'] = [
         'host' => $args['ms_host'],
         'port' => $args['ms_port']
-    ]);
+    ];
 }
+$migrator = new Manticoresearch\ESMigrator($config);
 
-$migrator->setup();
-if (is_array($indexes) && count($indexes) > 1) {
-    $indexes = [];
-    for ($i = 1; $i < count($indexes); $i++) {
+if (is_array($indexes) && count($indexes) > 0) {
+
+    $iMax = count($indexes);
+    for ($i = 0; $i < $iMax; $i++) {
+
         $esi = $migrator->getESIndex(['index' => $indexes[$i]]);
 
         $migrator->migrateIndex($esi[0]);
     }
 } else {
+    echo 'go all';
     $migrator->migrateAll();
 }
