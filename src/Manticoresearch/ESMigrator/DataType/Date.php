@@ -3,10 +3,10 @@
 
 namespace Manticoresearch\ESMigrator\DataType;
 
-
 class Date implements DataType
 {
-    function translate($estype,$mstypes=null) {
+    public function translate($estype, $mstypes = null)
+    {
         switch ($estype['format']) {
             case 'epoch_second':
                 $return = [
@@ -69,7 +69,6 @@ class Date implements DataType
             case 'strict_year_month':
             case 'year_month_day':
             case 'strict_year_month_day':
-
                 $return = [
                     'type' => 'timestamp',
                     'transform' => function ($date) {

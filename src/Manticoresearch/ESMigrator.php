@@ -85,23 +85,24 @@ class ESMigrator
     {
         return $this->config;
     }
+
     public static function getConfigKeys()
     {
-        function flatten($array, $prefix = '') {
+        $flatten = function ($array, $prefix = '') use (&$flatten) {
             $result = array();
-            foreach($array as $key=>$value) {
-                if(is_array($value)) {
-                    $result += flatten($value, $prefix . $key . '.');
-                }
-                else {
+            foreach ($array as $key => $value) {
+                if (is_array($value)) {
+                    $result += $flatten($value, $prefix . $key . '.');
+                } else {
                     $result[$prefix . $key] = $value;
                 }
             }
             return $result;
-        }
-        $static = new static;
-        return flatten($static->config);
+        };
+        $static = new self();
+        return $flatten($static->config);
     }
+
     public function setup()
     {
         $this->elasticsearch = ClientBuilder::create()->setHosts([$this->config['elasticsearch']])->build();
@@ -120,16 +121,21 @@ class ESMigrator
     {
         if (isset($estype['type']) && isset($types[$estype['type']])) {
             if (is_string($types[$estype['type']]['transform'])) {
-                if (class_exists('\\Manticoresearch\\ESMigrator\\DataType\\' . $types[$estype['type']]['transform'])) {
-                    $translateClass = '\\Manticoresearch\\ESMigrator\\DataType\\' . $types[$estype['type']]['transform'];
-                }elseif(class_exists($types[$estype['type']]['transform'])) {
-                    $translateClass =$types[$estype['type']]['transform'];
+                if (class_exists(
+                    '\\Manticoresearch\\ESMigrator\\DataType\\' . $types[$estype['type']]['transform']
+                )) {
+                    $translateClass =
+                        '\\Manticoresearch\\ESMigrator\\DataType\\' . $types[$estype['type']]['transform'];
+                } elseif (class_exists($types[$estype['type']]['transform'])) {
+                    $translateClass = $types[$estype['type']]['transform'];
+                } else {
+                    throw new \RuntimeException('Class name not found for type ' . $types[$estype['type']]);
                 }
                 $translate = new $translateClass();
-            } elseif($types[$estype['type']]['transform'] instanceof DataType) {
+            } elseif ($types[$estype['type']]['transform'] instanceof DataType) {
                 $translate = $types[$estype['type']]['transform'];
-            }else{
-                throw new \RuntimeException('Invalid transform class for data type '.$types[$estype['type']]);
+            } else {
+                throw new \RuntimeException('Invalid transform class for type ' . $types[$estype['type']]);
             }
 
             return $translate->translate($estype, $types);
@@ -175,7 +181,9 @@ class ESMigrator
             2 => array("pipe", "w")
         );
 
-        $index['mapping'] = $this->elasticsearch->indices()->getMapping(['index' => $index['index']])[$index['index']]['mappings'];
+        $index['mapping'] = $this->elasticsearch->indices()->getMapping([
+            'index' => $index['index']
+        ])[$index['index']]['mappings'];
         $index['type_mapping'] = [];
         $type_transforms = [];
         $has_text = false;
@@ -205,14 +213,19 @@ class ESMigrator
         }
 
         $this->logger->debug('Importing index' . $index['index']);
-        $fh = proc_open("elasticdump --input=http://" .
+        $fh = proc_open(
+            "elasticdump --input=http://" .
             $this->config['elasticsearch']['user'] . ":" .
             $this->config['elasticsearch']['pass'] . "@" .
             $this->config['elasticsearch']['host'] . ":" .
             $this->config['elasticsearch']['port'] . "/" .
             $index['index'] .
-            " --limit " . $this->config['elasticsearch']['batch_size'] . " --noRefresh --type=data --output=$", $descriptorspec,
-            $pipes, realpath('./'), array());
+            " --limit " . $this->config['elasticsearch']['batch_size'] . " --noRefresh --type=data --output=$",
+            $descriptorspec,
+            $pipes,
+            realpath('./'),
+            array()
+        );
         $batch = 0;
 
         $batch_docs = [];
@@ -241,13 +254,10 @@ class ESMigrator
                 $i++;
             }
             if (count($batch_docs) > 0) {
-
                 $r = $this->addToManticore($msIndex, $batch_docs);
-
             }
             fclose($pipes[1]);
         } else {
-
             $this->logger->error('Invalid data received from dump tool');
         }
 
