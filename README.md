@@ -46,6 +46,38 @@ Parameters
 * `manticoresearch.batch_size` - How many documents to group in a single INSERT batch in Manticore (default 10000)
 * `limit` - limit the number of documents from an index for migration (default 0 - migrate all )
 
+* `types.*` - allows overriding settings for a type
+
+Type transformation
+-------------------
+For a data type from ES there are 2 settings:
+* the Manticore data type that will be used 
+* a transform class
+
+A transform class looks like:
+```php
+class IP
+{
+    function translate($estype,$mstypes=null) {
+        return  [
+            'type' => 'bigint',
+            'transform' => function ($field) {
+                return ip2long($field);
+            }
+        ];
+    }
+}
+```
+The `translate()` method returns the Manticore data type and a transform function for the values.
+
+The `Native` transform class returns same data type defined by `types.name.type` and a function that simply forwards
+the value from ES without any modifications.
+
+The transform class can overwrite the data type defined at `types.name.type`. An example is the `Date` transform class
+which resets the data type depending on the ES defined date format.
+
+Custom transform classes can be passed in `types.name.transform` either by name or instance.
+
 TODO
 ----
 

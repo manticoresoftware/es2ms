@@ -3,6 +3,7 @@
 namespace Manticoresearch;
 
 use Elasticsearch\ClientBuilder;
+use Manticoresearch\ESMigrator\DataType\DataType;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -80,6 +81,27 @@ class ESMigrator
         return $this;
     }
 
+    public function getConfig()
+    {
+        return $this->config;
+    }
+    public static function getConfigKeys()
+    {
+        function flatten($array, $prefix = '') {
+            $result = array();
+            foreach($array as $key=>$value) {
+                if(is_array($value)) {
+                    $result += flatten($value, $prefix . $key . '.');
+                }
+                else {
+                    $result[$prefix . $key] = $value;
+                }
+            }
+            return $result;
+        }
+        $static = new static;
+        return flatten($static->config);
+    }
     public function setup()
     {
         $this->elasticsearch = ClientBuilder::create()->setHosts([$this->config['elasticsearch']])->build();
@@ -98,11 +120,18 @@ class ESMigrator
     {
         if (isset($estype['type']) && isset($types[$estype['type']])) {
             if (is_string($types[$estype['type']]['transform'])) {
-                $translateClass = '\\Manticoresearch\\ESMigrator\\DataType\\' . $types[$estype['type']]['transform'];
-            } else {
-                $translateClass = $types[$estype['type']]['transform'];
+                if (class_exists('\\Manticoresearch\\ESMigrator\\DataType\\' . $types[$estype['type']]['transform'])) {
+                    $translateClass = '\\Manticoresearch\\ESMigrator\\DataType\\' . $types[$estype['type']]['transform'];
+                }elseif(class_exists($types[$estype['type']]['transform'])) {
+                    $translateClass =$types[$estype['type']]['transform'];
+                }
+                $translate = new $translateClass();
+            } elseif($types[$estype['type']]['transform'] instanceof DataType) {
+                $translate = $types[$estype['type']]['transform'];
+            }else{
+                throw new \RuntimeException('Invalid transform class for data type '.$types[$estype['type']]);
             }
-            $translate = new $translateClass();
+
             return $translate->translate($estype, $types);
         }
         return ['type' => 'json', 'transform' => function ($field) {

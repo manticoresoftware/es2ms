@@ -4,7 +4,7 @@
 namespace Manticoresearch\ESMigrator\DataType;
 
 
-class Native
+class Native implements DataType
 {
     function translate($estype,$mstypes=null) {
         return  [

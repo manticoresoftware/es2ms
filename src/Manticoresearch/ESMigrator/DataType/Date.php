@@ -4,7 +4,7 @@
 namespace Manticoresearch\ESMigrator\DataType;
 
 
-class Date
+class Date implements DataType
 {
     function translate($estype,$mstypes=null) {
         switch ($estype['format']) {

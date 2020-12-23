@@ -4,7 +4,7 @@
 namespace Manticoresearch\ESMigrator\DataType;
 
 
-class IP
+class IP implements DataType
 {
     function translate($estype,$mstypes=null) {
         return  [

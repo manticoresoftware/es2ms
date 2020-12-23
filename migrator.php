@@ -1,47 +1,48 @@
 #!/usr/bin/php
 <?php
 require 'vendor/autoload.php';
+function set_nested_value(array &$arr, array $ancestors, $value)
+{
+    $current = &$arr;
+    foreach ($ancestors as $key) {
 
-//$esi = $migrator->getESIndex(['index'=>'optimize_perf']);
+        // To handle the original input, if an item is not an array,
+        // replace it with an array with the value as the first item.
+        if (!is_array($current)) {
+            $current = array($current);
+        }
+
+        if (!array_key_exists($key, $current)) {
+            $current[$key] = array();
+        }
+        $current = &$current[$key];
+    }
+
+    $current = $value;
+}
+
+$flatkeys = \Manticoresearch\ESMigrator::getConfigKeys();
+
 $cli = new Garden\Cli\Cli();
-$cli->opt('indexes', 'Indexes', false)
-    ->opt('dryrun', 'Show only schemas,no real import', false, 'boolean')
-    ->opt('elasticsearch.host', 'Elastic host', false)
-    ->opt('elasticsearch.port', 'Elastic port', false)
-    ->opt('elasticsearch.user', 'Elastic user', false)
-    ->opt('elasticsearch.pass', 'Elastic pass', false)
-    ->opt('elasticsearch.batch_size', 'Elastic get batch size', false)
-    ->opt('limit', 'Limit number of documents to retrieve', false)
-    ->opt('manticoresearch.host', 'Manticore host', false)
-    ->opt('manticoresearch.port', 'Manticore port', false)
-    ->opt('manticoresearch.batch_size', 'Manticore insert batch size', false);
+foreach ($flatkeys as $key => $default_value) {
+    $cli->opt($key, $default_value, false);
+}
+$cli->opt('indexes', 'Indexes', false);
 $args = $cli->parse($argv, true);
+
+
+$config = [];
+foreach ($flatkeys as $key => $default_value) {
+    $ancestors = explode('.', $key);
+    set_nested_value($config, $ancestors, $args->getOpt($key, $default_value));
+
+}
 if (isset($args['indexes']) && $args['indexes'] !== "") {
     $indexes = explode(',', $args['indexes']);
 } else {
     $indexes = [];
 }
 
-
-$config = [];
-
-$config['elasticsearch'] = [
-    'host' => $args->getOpt('elasticsearch.host', 'http://127.0.0.1'),
-    'port' => $args->getOpt('elasticsearch.port', 9200),
-    'user' => $args->getOpt('elasticsearch.user', ''),
-    'pass' => $args->getOpt('elasticsearch.pass', ''),
-    'batch_size' => $args->getOpt('elasticsearch.batch_size', 10000),
-];
-$config['limit'] =$args->getOpt('limit', 0);
-$config['manticoresearch'] = [
-    'host' => $args->getOpt('manticoresearch.user', '127.0.0.1'),
-    'port' => $args->getOpt('manticoresearch.port', 9308),
-    'batch_size' => $args->getOpt('manticoresearch.batch_size', 10000)
-];
-
-if (isset($args['dryrun'])) {
-    $config['dryrun'] = $args['dryrun'];
-}
 $migrator = new Manticoresearch\ESMigrator($config);
 
 if (is_array($indexes) && count($indexes) > 0) {
