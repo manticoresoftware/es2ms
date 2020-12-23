@@ -36,6 +36,8 @@ Parameters
 ----------
 * `indexes` - list of ES index names, separated by comma. Default:  migrate all indexes available
 * `dryrun` - perform a dry run without migrating anything. It prints information about available ES indexes
+* `onlyschemas` - only create the index(es), no data migration
+* `onlydata` - migrate the data, assume indexes are already created
 * `elasticsearch.host` - ES host, default: 127.0.0.1
 * `elasticsearch.port` - ES port, default: `92000`
 * `elasticsearch.user` - ES username, no default 
@@ -78,10 +80,18 @@ which resets the data type depending on the ES defined date format.
 
 Custom transform classes can be passed in `types.name.transform` either by name or instance.
 
+Limitations
+-----------
+
+* No tokenization settings are migrated currently. To tweak the indexes on Manticore use `--onlyschemas` to create 
+the indexes, tweak them and then use `--onlydata` to migrate the documents.
+
+* IP field is converted to big integer
+* structured fields should end up as JSON fields in Manticore
+
 TODO
 ----
 
 * add configuration file
-* add more cli parameters
 * multi-threading?
-* structured types
+

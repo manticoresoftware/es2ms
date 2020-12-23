@@ -14,6 +14,8 @@ class ESMigrator
     protected $manticoresearch;
     protected $config = [
         'dryrun' => false,
+        'onlyschemas' => false,
+        'onlydata' => false,
         'elasticsearch' =>
             [
                 'host' => '127.0.0.1',
@@ -148,8 +150,6 @@ class ESMigrator
 
     public function migrateAll()
     {
-
-
         $indices = $this->elasticsearch->cat()->indices();
         foreach ($indices as $v => $index) {
             if ($index['index'][0] === '.') {
@@ -180,13 +180,14 @@ class ESMigrator
             1 => array("pipe", "w"),
             2 => array("pipe", "w")
         );
-
+        echo "Migration index ".$index['index']."\n";
         $index['mapping'] = $this->elasticsearch->indices()->getMapping([
             'index' => $index['index']
         ])[$index['index']]['mappings'];
         $index['type_mapping'] = [];
         $type_transforms = [];
         $has_text = false;
+
         foreach ($index['mapping']['properties'] as $field => $map) {
             $type = $this->transformType($map, $this->config['types']);
             $index['type_mapping'][$field] = ['type' => $type['type']];
@@ -204,14 +205,21 @@ class ESMigrator
         }
         $msindex_name = preg_replace('/[^a-z_\d]/i', '', $index['index']);
         $msIndex = $this->manticoresearch->index($msindex_name);
-        $this->logger->debug('Creating index ' . $index['index']);
-        $msIndex->drop(true);
-        if ($has_text === true) {
-            $msIndex->create($index['type_mapping']);
-        } else {
-            $msIndex->create(array_merge(['dummy' => ['type' => 'text']], $index['type_mapping']));
+        if ($this->config['onlyschemas'] === true) {
+            echo "Creating  index ...";
+            $this->logger->debug('Creating index ' . $index['index']);
+            $msIndex->drop(true);
+            if ($has_text === true) {
+                $msIndex->create($index['type_mapping']);
+            } else {
+                $msIndex->create(array_merge(['dummy' => ['type' => 'text']], $index['type_mapping']));
+            }
+            echo "done.\n";
         }
-
+        if ($this->config['onlyschemas'] === true) {
+            return false;
+        }
+        echo "Migrating data ...";
         $this->logger->debug('Importing index' . $index['index']);
         $fh = proc_open(
             "elasticdump --input=http://" .
@@ -239,6 +247,7 @@ class ESMigrator
                     $batch_docs[] = $this->transformDoc($doc['_source'], $type_transforms);
 
                     $this->addToManticore($msIndex, $batch_docs);
+                    echo "done.\n";
                     return true;
                 }
                 if ($batch < $this->config['manticoresearch']['batch_size']) {
@@ -260,7 +269,7 @@ class ESMigrator
         } else {
             $this->logger->error('Invalid data received from dump tool');
         }
-
+        echo "done.\n";
         return true;
     }
 

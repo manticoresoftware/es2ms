@@ -25,7 +25,12 @@ $flatkeys = \Manticoresearch\ESMigrator::getConfigKeys();
 
 $cli = new Garden\Cli\Cli();
 foreach ($flatkeys as $key => $default_value) {
-    $cli->opt($key, $default_value, false);
+    if (is_bool($default_value)) {
+        $cli->opt($key, $default_value, false, 'boolean');
+    } else {
+        $cli->opt($key, $default_value, false);
+    }
+
 }
 $cli->opt('indexes', 'Indexes', false);
 $args = $cli->parse($argv, true);
