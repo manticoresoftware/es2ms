@@ -3,8 +3,6 @@ ES migrator
 
 Elastic to Manticore migration script.
 
-Currently only handles 1-level documents.
-
 Requirements
 ------------
 
@@ -58,7 +56,9 @@ For a data type from ES there are 2 settings:
 
 A transform class looks like:
 ```php
-class IP
+namespace Manticoresearch\ESMigrator\DataType;
+
+class IP implements DataType
 {
     function translate($estype,$mstypes=null) {
         return  [
@@ -78,7 +78,7 @@ the value from ES without any modifications.
 The transform class can overwrite the data type defined at `types.name.type`. An example is the `Date` transform class
 which resets the data type depending on the ES defined date format.
 
-Custom transform classes can be passed in `types.name.transform` either by name or instance.
+Custom transform classes can be passed in `types.name.transform` either by name or instance. The class must implement interface `Manticoresearch\ESMigrator\DataType\DataType`.
 
 Limitations
 -----------
