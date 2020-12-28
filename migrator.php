@@ -30,7 +30,6 @@ foreach ($flatkeys as $key => $default_value) {
     } else {
         $cli->opt($key, $default_value, false);
     }
-
 }
 $cli->opt('indexes', 'Indexes', false);
 $args = $cli->parse($argv, true);
@@ -40,24 +39,72 @@ $config = [];
 foreach ($flatkeys as $key => $default_value) {
     $ancestors = explode('.', $key);
     set_nested_value($config, $ancestors, $args->getOpt($key, $default_value));
-
 }
 if (isset($args['indexes']) && $args['indexes'] !== "") {
     $indexes = explode(',', $args['indexes']);
 } else {
     $indexes = [];
 }
+$threads = $args['threads'];
 
-$migrator = new Manticoresearch\ESMigrator($config);
 
+echo "Threads $threads\n";
 if (is_array($indexes) && count($indexes) > 0) {
     $iMax = count($indexes);
-    for ($i = 0; $i < $iMax; $i++) {
+    $i = 0;
+    for ($j = 0; $j < $threads; $j++) {
+        echo "Launch new fork $j------------------\n";
+        $pid = pcntl_fork();
+        $fork = $j;
+        if ($pid === -1) {
+            die("could not fork");
+        } elseif ($pid) {
+        } else {
+            $i = $fork;
+            while ($i < $iMax) {
+                $index = $indexes[$i];
 
-        $esi = $migrator->getESIndex(['index' => $indexes[$i]]);
-
-        $migrator->migrateIndex($esi[0]);
+                $i = $i + $threads;
+                $migrator = new Manticoresearch\ESMigrator($config);
+                $esi = $migrator->getESIndex(['index' => $index]);
+                $migrator->migrateIndex($esi[0]);
+            }
+            exit();
+        }
+    }
+    while (pcntl_waitpid(0, $status) !== -1) {
     }
 } else {
-    $migrator->migrateAll();
+    $catindex = new Manticoresearch\ESMigrator($config);
+    $indices = $catindex->getESIndexes();
+    foreach ($indices as $v => $index) {
+        if ($index['index'][0] === '.') {
+            unset($indices[$v]);
+        }
+    }
+    $indices = array_values($indices);
+
+    $i = 0;
+    $iMax = count($indices);
+    for ($j = 0; $j < $threads; $j++) {
+        echo "Launch new fork $j------------------\n";
+        $pid = pcntl_fork();
+        $fork = $j;
+        if ($pid === -1) {
+            die("could not fork");
+        } elseif ($pid) {
+        } else {
+            $i = $fork;
+            while ($i < $iMax) {
+                $index = $indices[$i];
+                $i = $i + $threads;
+                $migrator = new Manticoresearch\ESMigrator($config);
+                $esi = $migrator->getESIndex(['index' => $index['index']]);
+                $migrator->migrateIndex($esi[0]);
+            }
+            exit();
+        }
+    }
+    while (pcntl_waitpid(0, $status) !== -1) {
+    }
 }

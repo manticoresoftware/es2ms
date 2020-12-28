@@ -45,7 +45,7 @@ Parameters
 * `manticoresearch.port` - Manticore HTTP port, default: 9308
 * `manticoresearch.batch_size` - How many documents to group in a single INSERT batch in Manticore (default 10000)
 * `limit` - limit the number of documents from an index for migration (default 0 - migrate all )
-
+* `threads` -  split the indexes among multiple parallel workers, default is 1
 * `types.*` - allows overriding settings for a type
 
 Type transformation
@@ -93,5 +93,5 @@ TODO
 ----
 
 * add configuration file
-* multi-threading?
+
 

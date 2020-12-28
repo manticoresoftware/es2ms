@@ -13,6 +13,7 @@ class ESMigrator
     protected $elasticsearch;
     protected $manticoresearch;
     protected $config = [
+        'threads' => 1,
         'dryrun' => false,
         'onlyschemas' => false,
         'onlydata' => false,
@@ -148,29 +149,14 @@ class ESMigrator
     }
 
 
-    public function migrateAll()
-    {
-        $indices = $this->elasticsearch->cat()->indices();
-        foreach ($indices as $v => $index) {
-            if ($index['index'][0] === '.') {
-                unset($indices[$v]);
-            }
-        }
-        $indices = array_values($indices);
-        flush();
-        foreach ($indices as $index) {
-            $this->logger->debug('Start migration of ' . $index['index']);
-            $start = microtime(true);
-            $this->migrateIndex($index);
-            $end = microtime(true);
-            $took = (float)($end - $start);
-            $this->logger->debug('Migration of ' . $index['index'] . ' took ' . number_format($took, 2) . 's');
-        }
-    }
-
     public function getESIndex($name)
     {
         return $this->elasticsearch->cat()->indices($name);
+    }
+
+    public function getESIndexes()
+    {
+        return $this->elasticsearch->cat()->indices();
     }
 
     public function migrateIndex($index)
@@ -180,14 +166,22 @@ class ESMigrator
             1 => array("pipe", "w"),
             2 => array("pipe", "w")
         );
-        echo "Migration index ".$index['index']."\n";
-        $index['mapping'] = $this->elasticsearch->indices()->getMapping([
+        echo "Migration index " . $index['index'] . "\n";
+        $es_mapping = $this->elasticsearch->indices()->getMapping([
             'index' => $index['index']
-        ])[$index['index']]['mappings'];
+        ]);
+        if (!isset($es_mapping[$index['index']]) && !isset($es_mapping[$index['index']]['mappings'])) {
+            echo 'No mapping found, skipping\n';
+            return false;
+        }
+        $index['mapping'] = $es_mapping[$index['index']]['mappings'];
         $index['type_mapping'] = [];
         $type_transforms = [];
         $has_text = false;
-
+        if (!isset($index['mapping']['properties'])) {
+            echo "Empty mapping, skipping\n";
+            return false;
+        }
         foreach ($index['mapping']['properties'] as $field => $map) {
             $type = $this->transformType($map, $this->config['types']);
             $index['type_mapping'][$field] = ['type' => $type['type']];
@@ -200,13 +194,13 @@ class ESMigrator
             echo $index['index'] . "\n";
             $output = null;
 
-            print_r($index);
+            //  print_r($index);
             return false;
         }
         $msindex_name = preg_replace('/[^a-z_\d]/i', '', $index['index']);
         $msIndex = $this->manticoresearch->index($msindex_name);
-        if ($this->config['onlyschemas'] === true) {
-            echo "Creating  index ...";
+        if ($this->config['onlydata'] !== true) {
+            echo "Creating  index " . $index['index'] . "...";
             $this->logger->debug('Creating index ' . $index['index']);
             $msIndex->drop(true);
             if ($has_text === true) {
@@ -221,6 +215,7 @@ class ESMigrator
         }
         echo "Migrating data ...";
         $this->logger->debug('Importing index' . $index['index']);
+        flush();
         $fh = proc_open(
             "elasticdump --input=http://" .
             $this->config['elasticsearch']['user'] . ":" .
@@ -245,8 +240,13 @@ class ESMigrator
                 flush();
                 if ($i > $this->config['limit'] && $this->config['limit'] !== 0) {
                     $batch_docs[] = $this->transformDoc($doc['_source'], $type_transforms);
+                    try {
+                        $this->addToManticore($msIndex, $batch_docs);
+                    } catch (\Exception $e) {
 
-                    $this->addToManticore($msIndex, $batch_docs);
+                        $this->logger->error($e->getMessage());
+                    }
+
                     echo "done.\n";
                     return true;
                 }
@@ -263,7 +263,13 @@ class ESMigrator
                 $i++;
             }
             if (count($batch_docs) > 0) {
-                $r = $this->addToManticore($msIndex, $batch_docs);
+                try {
+                    $this->addToManticore($msIndex, $batch_docs);
+                } catch (\Exception $e) {
+
+
+                    $this->logger->error($e->getMessage());
+                }
             }
             fclose($pipes[1]);
         } else {
