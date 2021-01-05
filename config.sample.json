@@ -1,0 +1,13 @@
+{
+  "elasticsearch" : {
+    "host": "127.0.0.1",
+    "user": "",
+    "pass": "",
+    "port": 9201
+  },
+  "manticoresearch": {
+    "host": "127.0.0.1",
+    "port": 6368
+  },
+  "threads": 4
+}

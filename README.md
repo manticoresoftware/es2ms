@@ -47,6 +47,14 @@ Parameters
 * `limit` - limit the number of documents from an index for migration (default 0 - migrate all )
 * `threads` -  split the indexes among multiple parallel workers, default is 1
 * `types.*` - allows overriding settings for a type
+* `config` - read parameters from a config file in json format
+
+Parameters read from a config file can be overridden by values provided as command line arguments
+
+```php
+php migrator.php  --config config.sample.json --threads=2
+```
+
 
 Type transformation
 -------------------

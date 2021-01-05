@@ -32,23 +32,38 @@ foreach ($flatkeys as $key => $default_value) {
     }
 }
 $cli->opt('indexes', 'Indexes', false);
+$cli->opt('config', 'Config file', false);
 $args = $cli->parse($argv, true);
 
 
+$indexes = [];
 $config = [];
+$threads =1;
+
+$config_file = $args->getOpt('config', '');
+if ($config_file !== '') {
+    $config = json_decode(file_get_contents($config_file), true);
+    if (isset($config['threads'])) {
+        $threads = $config['threads'];
+    }
+    if (isset($config['indexes'])) {
+        $indexes = $config['indexes'];
+    }
+}
+
 foreach ($flatkeys as $key => $default_value) {
     $ancestors = explode('.', $key);
-    set_nested_value($config, $ancestors, $args->getOpt($key, $default_value));
+    $value = $args->getOpt($key, "");
+    if($value!=="") {
+        set_nested_value($config, $ancestors,$args->getOpt($key, $default_value));
+    }
+
 }
 if (isset($args['indexes']) && $args['indexes'] !== "") {
     $indexes = explode(',', $args['indexes']);
-} else {
-    $indexes = [];
 }
-$threads = $args['threads'];
+$threads =  $args->getOpt('threads', $threads);
 
-
-echo "Threads $threads\n";
 if (is_array($indexes) && count($indexes) > 0) {
     $iMax = count($indexes);
     $i = 0;
