@@ -94,6 +94,7 @@ class ESMigrator
         $static = new self();
         return $static->config;
     }
+
     public static function getConfigKeys()
     {
         $flatten = function ($array, $prefix = '') use (&$flatten) {
@@ -114,7 +115,7 @@ class ESMigrator
     public function setup()
     {
         $this->elasticsearch = ClientBuilder::create()->setHosts([$this->config['elasticsearch']])->build();
-        $this->manticoresearch = new Client($this->config['manticoresearch'], $this->logger);
+        $this->manticoresearch = new Client($this->config['manticoresearch']);
     }
 
     protected function transformDoc($doc, $transform)
@@ -171,12 +172,12 @@ class ESMigrator
             1 => array("pipe", "w"),
             2 => array("pipe", "w")
         );
-        echo "Migration index " . $index['index'] . "\n";
+        $this->logger->info("Getting index mapping");
         $es_mapping = $this->elasticsearch->indices()->getMapping([
             'index' => $index['index']
         ]);
         if (!isset($es_mapping[$index['index']]) && !isset($es_mapping[$index['index']]['mappings'])) {
-            echo 'No mapping found, skipping\n';
+            $this->logger->info('No mapping found, skipping');
             return false;
         }
         $index['mapping'] = $es_mapping[$index['index']]['mappings'];
@@ -184,7 +185,7 @@ class ESMigrator
         $type_transforms = [];
         $has_text = false;
         if (!isset($index['mapping']['properties'])) {
-            echo "Empty mapping, skipping\n";
+            $this->logger->warning('Empty mapping, skipping');
             return false;
         }
         foreach ($index['mapping']['properties'] as $field => $map) {
@@ -196,7 +197,7 @@ class ESMigrator
             }
         }
         if ($this->config['dryrun'] === true) {
-            echo $index['index'] . "\n";
+            $this->logger->info($index);
             $output = null;
 
             //  print_r($index);
@@ -205,21 +206,20 @@ class ESMigrator
         $msindex_name = preg_replace('/[^a-z_\d]/i', '', $index['index']);
         $msIndex = $this->manticoresearch->index($msindex_name);
         if ($this->config['onlydata'] !== true) {
-            echo "Creating  index " . $index['index'] . "...";
-            $this->logger->debug('Creating index ' . $index['index']);
+
+            $this->logger->info('Creating index');
             $msIndex->drop(true);
             if ($has_text === true) {
                 $msIndex->create($index['type_mapping']);
             } else {
                 $msIndex->create(array_merge(['dummy' => ['type' => 'text']], $index['type_mapping']));
             }
-            echo "done.\n";
+
         }
         if ($this->config['onlyschemas'] === true) {
             return false;
         }
-        echo "Migrating data ...";
-        $this->logger->debug('Importing index' . $index['index']);
+        $this->logger->info('Importing data');
         flush();
         $fh = proc_open(
             "elasticdump --input=http://" .
@@ -248,11 +248,9 @@ class ESMigrator
                     try {
                         $this->addToManticore($msIndex, $batch_docs);
                     } catch (\Exception $e) {
-
                         $this->logger->error($e->getMessage());
                     }
-
-                    echo "done.\n";
+                    $this->logger->info('Imported ' . $i . " docs");
                     return true;
                 }
                 if ($batch < $this->config['manticoresearch']['batch_size']) {
@@ -271,16 +269,18 @@ class ESMigrator
                 try {
                     $this->addToManticore($msIndex, $batch_docs);
                 } catch (\Exception $e) {
-
-
                     $this->logger->error($e->getMessage());
                 }
+                $this->logger->info('Imported ' . $i . " docs");
+            }
+            if ($i === 0) {
+                $this->logger->warning('Imported ' . $i . " docs");
             }
             fclose($pipes[1]);
         } else {
             $this->logger->error('Invalid data received from dump tool');
         }
-        echo "done.\n";
+        $this->logger->info('Finished');
         return true;
     }
 

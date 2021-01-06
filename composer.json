@@ -8,7 +8,8 @@
       "ext-mysqli": "*",
       "manticoresoftware/manticoresearch-php": "^1.5",
       "vanilla/garden-cli": "~2.0",
-      "psr/log": "^1.1"
+      "psr/log": "^1.1",
+        "monolog/monolog": "^2.2"
     },
     "autoload": {
       "psr-4": {

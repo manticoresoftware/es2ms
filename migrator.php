@@ -1,6 +1,11 @@
 #!/usr/bin/php
 <?php
 require 'vendor/autoload.php';
+
+use Monolog\Logger;
+use Monolog\Formatter\LineFormatter;
+use Monolog\Handler\StreamHandler;
+
 function set_nested_value(array &$arr, array $ancestors, $value)
 {
     $current = &$arr;
@@ -33,6 +38,7 @@ foreach ($flatkeys as $key => $default_value) {
 }
 $cli->opt('indexes', 'Indexes', false);
 $cli->opt('config', 'Config file', false);
+$cli->opt('log', 'Log to file or stdout', false);
 $args = $cli->parse($argv, true);
 
 
@@ -40,9 +46,20 @@ $indexes = [];
 $config = [];
 $threads = 1;
 
+$log_file = $args->getOpt('log', 'stdout');
+$dateFormat = "Y-m-d\TH:i:s";
+$output = "[%datetime%]   %channel% %message%\n";
+$formatter = new LineFormatter($output,$dateFormat);
+if ($log_file === 'stdout') {
+    $log_file = 'php://stdout';
+}
+$streamHandler = new StreamHandler($log_file,Logger::INFO);
+$streamHandler->setFormatter($formatter);
+
+
 $config_file = $args->getOpt('config', '');
 if ($config_file !== '') {
-    $config = array_replace_recursive (
+    $config = array_replace_recursive(
         \Manticoresearch\ESMigrator::getDefaultConfig(),
         json_decode(file_get_contents($config_file), true)
     );
@@ -70,7 +87,6 @@ if (is_array($indexes) && count($indexes) > 0) {
     $iMax = count($indexes);
     $i = 0;
     for ($j = 0; $j < $threads; $j++) {
-        echo "Launch new fork $j------------------\n";
         $pid = pcntl_fork();
         $fork = $j;
         if ($pid === -1) {
@@ -82,7 +98,9 @@ if (is_array($indexes) && count($indexes) > 0) {
                 $index = $indexes[$i];
 
                 $i = $i + $threads;
-                $migrator = new Manticoresearch\ESMigrator($config);
+                $logger = new Logger('Thread '.$fork.": Index ".$index.":");
+                $logger->pushHandler($streamHandler);
+                $migrator = new Manticoresearch\ESMigrator($config, $logger);
                 $esi = $migrator->getESIndex(['index' => $index]);
                 $migrator->migrateIndex($esi[0]);
             }
@@ -92,6 +110,7 @@ if (is_array($indexes) && count($indexes) > 0) {
     while (pcntl_waitpid(0, $status) !== -1) {
     }
 } else {
+
     $catindex = new Manticoresearch\ESMigrator($config);
     $indices = $catindex->getESIndexes();
     foreach ($indices as $v => $index) {
@@ -104,7 +123,6 @@ if (is_array($indexes) && count($indexes) > 0) {
     $i = 0;
     $iMax = count($indices);
     for ($j = 0; $j < $threads; $j++) {
-        echo "Launch new fork $j------------------\n";
         $pid = pcntl_fork();
         $fork = $j;
         if ($pid === -1) {
@@ -115,7 +133,9 @@ if (is_array($indexes) && count($indexes) > 0) {
             while ($i < $iMax) {
                 $index = $indices[$i];
                 $i = $i + $threads;
-                $migrator = new Manticoresearch\ESMigrator($config);
+                $logger = new Logger('Thread '.$fork.": Index ".$index['index'].":");
+                $logger->pushHandler($streamHandler);
+                $migrator = new Manticoresearch\ESMigrator($config, $logger);
                 $esi = $migrator->getESIndex(['index' => $index['index']]);
                 $migrator->migrateIndex($esi[0]);
             }
