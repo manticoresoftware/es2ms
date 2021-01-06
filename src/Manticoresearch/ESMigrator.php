@@ -89,6 +89,11 @@ class ESMigrator
         return $this->config;
     }
 
+    public static function getDefaultConfig()
+    {
+        $static = new self();
+        return $static->config;
+    }
     public static function getConfigKeys()
     {
         $flatten = function ($array, $prefix = '') use (&$flatten) {

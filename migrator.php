@@ -38,11 +38,14 @@ $args = $cli->parse($argv, true);
 
 $indexes = [];
 $config = [];
-$threads =1;
+$threads = 1;
 
 $config_file = $args->getOpt('config', '');
 if ($config_file !== '') {
-    $config = json_decode(file_get_contents($config_file), true);
+    $config = array_replace_recursive (
+        \Manticoresearch\ESMigrator::getDefaultConfig(),
+        json_decode(file_get_contents($config_file), true)
+    );
     if (isset($config['threads'])) {
         $threads = $config['threads'];
     }
@@ -54,15 +57,14 @@ if ($config_file !== '') {
 foreach ($flatkeys as $key => $default_value) {
     $ancestors = explode('.', $key);
     $value = $args->getOpt($key, "");
-    if($value!=="") {
-        set_nested_value($config, $ancestors,$args->getOpt($key, $default_value));
+    if ($value !== "") {
+        set_nested_value($config, $ancestors, $args->getOpt($key, $default_value));
     }
-
 }
 if (isset($args['indexes']) && $args['indexes'] !== "") {
     $indexes = explode(',', $args['indexes']);
 }
-$threads =  $args->getOpt('threads', $threads);
+$threads = $args->getOpt('threads', $threads);
 
 if (is_array($indexes) && count($indexes) > 0) {
     $iMax = count($indexes);
