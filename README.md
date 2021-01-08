@@ -47,6 +47,7 @@ Parameters
 * `limit` - limit the number of documents from an index for migration (default 0 - migrate all )
 * `threads` -  split the indexes among multiple parallel workers, default is 1
 * `types.*` - allows overriding settings for a type
+* `log`- log file path; default is 'stdout' - output to console
 * `config` - read parameters from a config file in json format
 
 Parameters read from a config file can be overridden by values provided as command line arguments
@@ -93,13 +94,4 @@ Limitations
 
 * No tokenization settings are migrated currently. To tweak the indexes on Manticore use `--onlyschemas` to create 
 the indexes, tweak them and then use `--onlydata` to migrate the documents.
-
-* IP field is converted to big integer
-* structured fields should end up as JSON fields in Manticore
-
-TODO
-----
-
-* add configuration file
-
-
+* structured fields end up as JSON fields in Manticore
