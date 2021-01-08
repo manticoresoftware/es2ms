@@ -197,7 +197,7 @@ class ESMigrator
             }
         }
         if ($this->config['dryrun'] === true) {
-            $this->logger->info($index);
+            $this->logger->info(json_encode($index));
             $output = null;
 
             //  print_r($index);
@@ -208,12 +208,18 @@ class ESMigrator
         if ($this->config['onlydata'] !== true) {
 
             $this->logger->info('Creating index');
-            $msIndex->drop(true);
-            if ($has_text === true) {
-                $msIndex->create($index['type_mapping']);
-            } else {
-                $msIndex->create(array_merge(['dummy' => ['type' => 'text']], $index['type_mapping']));
+            try {
+                $msIndex->drop(true);
+                if ($has_text === true) {
+                    $msIndex->create($index['type_mapping']);
+                } else {
+                    $msIndex->create(array_merge(['dummy' => ['type' => 'text']], $index['type_mapping']));
+                }
+            } catch (\Exception  $e) {
+                $this->logger->error('table creation failed with error:' . $e->getMessage());
+                return false;
             }
+
 
         }
         if ($this->config['onlyschemas'] === true) {
@@ -221,14 +227,15 @@ class ESMigrator
         }
         $this->logger->info('Importing data');
         flush();
-        $fh = proc_open(
-            "elasticdump --input=http://" .
+        $esdump_line = "NODE_OPTIONS=--max_old_space_size=4096  elasticdump --input=http://" .
             $this->config['elasticsearch']['user'] . ":" .
             $this->config['elasticsearch']['pass'] . "@" .
             $this->config['elasticsearch']['host'] . ":" .
             $this->config['elasticsearch']['port'] . "/" .
             $index['index'] .
-            " --limit " . $this->config['elasticsearch']['batch_size'] . " --noRefresh --type=data --output=$",
+            " --limit " . $this->config['elasticsearch']['batch_size'] . " --noRefresh --type=data --output=$";
+        $fh = proc_open(
+            $esdump_line,
             $descriptorspec,
             $pipes,
             realpath('./'),
@@ -242,28 +249,34 @@ class ESMigrator
         if (is_resource($fh)) {
             while ($line = fgets($pipes[1])) {
                 $doc = json_decode($line, true);
-                flush();
-                if ($i > $this->config['limit'] && $this->config['limit'] !== 0) {
-                    $batch_docs[] = $this->transformDoc($doc['_source'], $type_transforms);
-                    try {
-                        $this->addToManticore($msIndex, $batch_docs);
-                    } catch (\Exception $e) {
-                        $this->logger->error($e->getMessage());
-                    }
-                    $this->logger->info('Imported ' . $i . " docs");
-                    return true;
-                }
-                if ($batch < $this->config['manticoresearch']['batch_size']) {
-                    $batch_docs[] = $this->transformDoc($doc['_source'], $type_transforms);
-                    $batch++;
-                } else {
-                    $batch_docs[] = $this->transformDoc($doc['_source'], $type_transforms);
-                    $this->addToManticore($msIndex, $batch_docs);
-                    $batch = 0;
-                    $batch_docs = [];
-                }
+                if (is_null($doc)) {
+                    $this->logger->error($line);
 
-                $i++;
+                } else {
+
+                    flush();
+                    if ($i > $this->config['limit'] && $this->config['limit'] !== 0) {
+                        $batch_docs[] = $this->transformDoc($doc['_source'], $type_transforms);
+                        try {
+                            $this->addToManticore($msIndex, $batch_docs);
+                        } catch (\Exception $e) {
+                            $this->logger->error($e->getMessage());
+                        }
+                        $this->logger->info('Imported ' . $i . " docs");
+                        return true;
+                    }
+                    if ($batch < $this->config['manticoresearch']['batch_size']) {
+                        $batch_docs[] = $this->transformDoc($doc['_source'], $type_transforms);
+                        $batch++;
+                    } else {
+                        $batch_docs[] = $this->transformDoc($doc['_source'], $type_transforms);
+                        $this->addToManticore($msIndex, $batch_docs);
+                        $batch = 0;
+                        $batch_docs = [];
+                    }
+
+                    $i++;
+                }
             }
             if (count($batch_docs) > 0) {
                 try {
