@@ -1,14 +1,12 @@
-ES migrator
+Elasticsearch -> Manticore Search data migration tool
 ===========
 
-Elastic to Manticore migration script.
+This tool automates copying data from [Elasticsearch](https://www.elastic.co/elasticsearch/) to [Manticore Search](https://manticoresearch.com/)
 
 Requirements
 ------------
-
-Elastic dump tool : https://github.com/elasticsearch-dump/elasticsearch-dump
-
-Elastic and Manticore PHP clients
+1. Elasticsearch dump tool : https://github.com/elasticsearch-dump/elasticsearch-dump
+2. Elasticsearch and Manticore PHP clients
 
 Install
 -------
