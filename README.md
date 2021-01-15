@@ -1,7 +1,7 @@
-ES migrator
+ES2MS
 ===========
 
-Elastic to Manticore migration script.
+Elastic to Manticore migration tool.
 
 Requirements
 ------------
@@ -21,11 +21,11 @@ composer update
 Usage
 -----
 
-CLI:
+Migrate all indexes:
 ```php
-php migrator.php  #migrate all indexes
+php migrator.php
 ```
-
+Migrate certain indexes:
 ```php
 php migrator.php  --elasticsearch.host=my.domain.com --elasticsearch.port=9200 --indexes=index1,index2
 ```
@@ -45,8 +45,8 @@ Parameters
 * `manticoresearch.port` - Manticore HTTP port, default: 9308
 * `manticoresearch.batch_size` - How many documents to group in a single INSERT batch in Manticore (default 10000)
 * `limit` - limit the number of documents from an index for migration (default 0 - migrate all )
-* `threads` -  split the indexes among multiple parallel workers, default is 1
-* `types.*` - allows overriding settings for a type
+* `threads` -  use multiple parallel workers to process the indexes (each worker process one index at a time), default is 1
+* `types.*` - allows overriding settings for a data type ( see [Data type tranformation](docs/Data_type_transformation.md))
 * `log`- log file path; default is 'stdout' - output to console
 * `config` - read parameters from a config file in json format
 
@@ -56,42 +56,6 @@ Parameters read from a config file can be overridden by values provided as comma
 php migrator.php  --config config.sample.json --threads=2
 ```
 
-
-Type transformation
--------------------
-For a data type from ES there are 2 settings:
-* the Manticore data type that will be used 
-* a transform class
-
-A transform class looks like:
-```php
-namespace Manticoresearch\ESMigrator\DataType;
-
-class IP implements DataType
-{
-    function translate($estype,$mstypes=null) {
-        return  [
-            'type' => 'bigint',
-            'transform' => function ($field) {
-                return ip2long($field);
-            }
-        ];
-    }
-}
-```
-The `translate()` method returns the Manticore data type and a transform function for the values.
-
-The `Native` transform class returns same data type defined by `types.name.type` and a function that simply forwards
-the value from ES without any modifications.
-
-The transform class can overwrite the data type defined at `types.name.type`. An example is the `Date` transform class
-which resets the data type depending on the ES defined date format.
-
-Custom transform classes can be passed in `types.name.transform` either by name or instance. The class must implement interface `Manticoresearch\ESMigrator\DataType\DataType`.
-
-Limitations
------------
-
-* No tokenization settings are migrated currently. To tweak the indexes on Manticore use `--onlyschemas` to create 
-the indexes, tweak them and then use `--onlydata` to migrate the documents.
-* structured fields end up as JSON fields in Manticore
+License
+-------
+This software is licensed under the [Apache v2.0 license](LICENSE).

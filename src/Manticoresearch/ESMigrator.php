@@ -75,7 +75,7 @@ class ESMigrator
 
 
     /**
-     * @param array $config
+     * @param  array $config
      * @return $this
      */
     public function setConfig(array $config): self
@@ -132,7 +132,8 @@ class ESMigrator
             if (is_string($types[$estype['type']]['transform'])) {
                 if (class_exists(
                     '\\Manticoresearch\\ESMigrator\\DataType\\' . $types[$estype['type']]['transform']
-                )) {
+                )
+                ) {
                     $translateClass =
                         '\\Manticoresearch\\ESMigrator\\DataType\\' . $types[$estype['type']]['transform'];
                 } elseif (class_exists($types[$estype['type']]['transform'])) {
@@ -173,9 +174,11 @@ class ESMigrator
             2 => array("pipe", "w")
         );
         $this->logger->info("Getting index mapping");
-        $es_mapping = $this->elasticsearch->indices()->getMapping([
+        $es_mapping = $this->elasticsearch->indices()->getMapping(
+            [
             'index' => $index['index']
-        ]);
+            ]
+        );
         if (!isset($es_mapping[$index['index']]) && !isset($es_mapping[$index['index']]['mappings'])) {
             $this->logger->info('No mapping found, skipping');
             return false;
@@ -206,7 +209,6 @@ class ESMigrator
         $msindex_name = preg_replace('/[^a-z_\d]/i', '', $index['index']);
         $msIndex = $this->manticoresearch->index($msindex_name);
         if ($this->config['onlydata'] !== true) {
-
             $this->logger->info('Creating index');
             try {
                 $msIndex->drop(true);
@@ -219,8 +221,6 @@ class ESMigrator
                 $this->logger->error('table creation failed with error:' . $e->getMessage());
                 return false;
             }
-
-
         }
         if ($this->config['onlyschemas'] === true) {
             return false;
@@ -251,9 +251,7 @@ class ESMigrator
                 $doc = json_decode($line, true);
                 if (is_null($doc)) {
                     $this->logger->error($line);
-
                 } else {
-
                     flush();
                     if ($i > $this->config['limit'] && $this->config['limit'] !== 0) {
                         $batch_docs[] = $this->transformDoc($doc['_source'], $type_transforms);

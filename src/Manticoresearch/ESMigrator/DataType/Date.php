@@ -5,7 +5,7 @@ namespace Manticoresearch\ESMigrator\DataType;
 
 class Date implements DataType
 {
-    public function translate($estype, $mstypes=null)
+    public function translate($estype, $mstypes = null)
     {
         $multiple = explode('||', $estype['format']);
         if (count($multiple)>1) {
@@ -14,18 +14,18 @@ class Date implements DataType
         switch ($estype['format']) {
             case 'epoch_second':
                 $return = [
-                    'type' => 'timestamp',
-                    'transform' => function ($date) {
-                        return $date;
-                    }
+                'type' => 'timestamp',
+                'transform' => function ($date) {
+                    return $date;
+                }
                 ];
                 break;
             case 'epoch_millis':
                 $return = [
-                    'type' => 'bigint',
-                    'transform' => function ($date) {
-                        return $date;
-                    }
+                'type' => 'bigint',
+                'transform' => function ($date) {
+                    return $date;
+                }
                 ];
                 break;
             case 'date_optional_time ':
@@ -73,12 +73,11 @@ class Date implements DataType
             case 'strict_year_month':
             case 'year_month_day':
             case 'strict_year_month_day':
-
                 $return = [
-                    'type' => 'timestamp',
-                    'transform' => function ($date) {
-                        return strtotime($date);
-                    }
+                'type' => 'timestamp',
+                'transform' => function ($date) {
+                    return strtotime($date);
+                }
                 ];
                 if (strpos($estype['format'], 'millis') !== false) {
                     $return['type'] = 'bigint';
@@ -86,10 +85,10 @@ class Date implements DataType
                 break;
             default:
                 $return = [
-                    'type' => 'string',
-                    'transform' => function ($date) {
-                        return $date;
-                    }
+                'type' => 'string',
+                'transform' => function ($date) {
+                    return $date;
+                }
                 ];
                 break;
         }
