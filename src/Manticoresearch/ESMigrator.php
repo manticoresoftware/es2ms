@@ -168,6 +168,11 @@ class ESMigrator
 
     public function migrateIndex($index)
     {
+        if(!exec('elasticdump --version 2> /dev/null')){
+            $this->logger->info('Elasticdump not installed!');
+            return false;
+        }
+
         $descriptorspec = array(
             0 => array("pipe", "r"),
             1 => array("pipe", "w"),
