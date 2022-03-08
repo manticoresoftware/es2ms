@@ -35,7 +35,7 @@ Parameters
 * `onlyschemas` - only create the index(es), no data migration
 * `onlydata` - migrate the data, assume indexes are already created
 * `elasticsearch.host` - ES host, default: 127.0.0.1
-* `elasticsearch.port` - ES port, default: `92000`
+* `elasticsearch.port` - ES port, default: `9200`
 * `elasticsearch.user` - ES username, no default 
 * `elasticsearch.pass` - ES password, no default
 * `elasticsearch.batch_size` - How many ES documents to retrieve per round (default 10000)  
