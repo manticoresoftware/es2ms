@@ -73,9 +73,9 @@ if ($config_file !== '') {
 
 foreach ($flatkeys as $key => $default_value) {
     $ancestors = explode('.', $key);
-    $value = $args->getOpt($key, "");
+    $value = $args->getOpt($key, $default_value);
     if ($value !== "") {
-        set_nested_value($config, $ancestors, $args->getOpt($key, $default_value));
+        set_nested_value($config, $ancestors, $value);
     }
 }
 if (isset($args['indexes']) && $args['indexes'] !== "") {

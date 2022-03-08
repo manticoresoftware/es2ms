@@ -168,8 +168,9 @@ class ESMigrator
 
     public function migrateIndex($index)
     {
-        if(!exec('elasticdump --version 2> /dev/null')){
+        if ( ! exec('npm elasticdump --version 2> /dev/null')) {
             $this->logger->info('Elasticdump not installed!');
+
             return false;
         }
 
@@ -232,9 +233,13 @@ class ESMigrator
         }
         $this->logger->info('Importing data');
         flush();
-        $esdump_line = "NODE_OPTIONS=--max_old_space_size=4096  elasticdump --input=http://" .
-            $this->config['elasticsearch']['user'] . ":" .
-            $this->config['elasticsearch']['pass'] . "@" .
+
+        $auth = '';
+        if (isset($this->config['elasticsearch']['user']) && $this->config['elasticsearch']['pass']){
+            $auth = $this->config['elasticsearch']['user'] . ":" . $this->config['elasticsearch']['pass'] . "@" ;
+        }
+        $esdump_line = "NODE_OPTIONS=--max_old_space_size=4096 npm elasticdump --input=http://" .
+            $auth .
             $this->config['elasticsearch']['host'] . ":" .
             $this->config['elasticsearch']['port'] . "/" .
             $index['index'] .
